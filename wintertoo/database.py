@@ -3,8 +3,37 @@ import getpass
 import numpy as np
 import pandas as pd
 import psycopg
+from sqlalchemy import Select, create_engine
+from winterdrp.pipelines.summer.models import ProgramTable
+from winterdrp.utils.sql import get_engine
 
 from wintertoo.data import PROGRAM_DB_HOST
+
+#
+# def get_engine(
+#     db_user: str = None,  # FIXME create read-only user
+#     db_password: str = None,
+#     db_host: str = "localhost",
+#     db_name: str = "summer",
+# ):
+#     return create_engine(
+#         f"postgresql+psycopg://{db_user}:{db_password}" f"@{db_host}/{db_name}",
+#         future=True,
+#     )
+
+
+def add_user(email: str, passhash: str):
+    """
+    Add a new user to the database
+
+    :param email: Email of user
+    :param passhash: Hash of password (NOT PASSWORD ITSELF!!!)
+    :return: None
+    """
+    with engine.connect() as conn:
+        with conn.begin():
+            stmt = Insert(Users).values(email=email, passhash=passhash)
+            conn.execute(stmt)
 
 
 def get_program_details(  # pylint: disable=too-many-arguments
@@ -34,20 +63,34 @@ def get_program_details(  # pylint: disable=too-many-arguments
             f"Enter password for program_db_user {program_db_user}: "
         )
 
-    with psycopg.connect(  # pylint: disable=not-context-manager
-        f"dbname='{program_db_name}' user={program_db_user} "
-        f"password={program_db_password} host={program_db_host}",
-    ) as conn:
-        conn.read_only = True
-        with conn.execute("SELECT * FROM programs") as cursor:
-            colnames = [desc[0] for desc in cursor.description]
-            data = cursor.fetchall()
-            data = pd.DataFrame(data, columns=colnames)
-
-    mask = np.logical_and(
-        data["prog_api_key"] == program_api_key, data["progname"] == program_name
+    engine = get_engine(
+        db_user=program_db_user,
+        db_password=program_db_password,
+        db_host=program_db_host,
+        db_name=program_db_name,
     )
-    data = data[mask]
+
+    with engine.connect() as conn:
+        stmt = Select(ProgramTable).where(
+            ProgramTable.progname == program_name,
+            ProgramTable.prog_key == program_api_key,
+        )
+        data = pd.read_sql_query(sql=stmt, con=conn)
+
+    # with psycopg.connect(  # pylint: disable=not-context-manager
+    #     f"dbname='{program_db_name}' user={program_db_user} "
+    #     f"password={program_db_password} host={program_db_host}",
+    # ) as conn:
+    #     conn.read_only = True
+    #     with conn.execute("SELECT * FROM programs") as cursor:
+    #         colnames = [desc[0] for desc in cursor.description]
+    #         data = cursor.fetchall()
+    #         data = pd.DataFrame(data, columns=colnames)
+    #
+    # mask = np.logical_and(
+    #     data["prog_api_key"] == program_api_key, data["progname"] == program_name
+    # )
+    # data = data[mask]
 
     for col in ["startdate", "enddate"]:
         data[col] = data[col].astype(str)

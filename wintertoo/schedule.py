@@ -5,11 +5,11 @@ import logging
 from typing import Union
 
 import pandas as pd
+from winterdrp.pipelines.summer.models import Program
 
 from wintertoo.data import get_default_value
 from wintertoo.errors import WinterValidationError
 from wintertoo.fields import get_best_field, get_field_info
-from wintertoo.models import Program
 from wintertoo.models.too import (
     ALL_TOO_CLASSES,
     FullTooRequest,

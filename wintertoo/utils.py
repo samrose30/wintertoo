@@ -14,9 +14,9 @@ import pandas as pd
 import psycopg
 from astropy.coordinates import AltAz, SkyCoord
 from astropy.time import Time
+from winterdrp.pipelines.summer.models import Program
 
 from wintertoo.data import PALOMAR_LOC, PROGRAM_DB_HOST, palomar_observer
-from wintertoo.models import Program
 from wintertoo.models.too import Summer, Winter
 
 logger = logging.getLogger(__name__)
